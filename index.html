@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TP FAN API Status Dashboard</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .check-table td {
+        padding: 0.25rem;
+      }
+      .highlight-failed {
+        background-color: #fee2e2;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="container mx-auto p-4">
+      <h1 class="text-2xl font-bold mb-4 text-center">
+        TP FAN API Status Dashboard
+      </h1>
+      <table class="table-auto w-full bg-white shadow-md rounded-lg">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="px-4 py-2">Domain</th>
+            <th class="px-4 py-2">Status</th>
+            <th class="px-4 py-2">App Status</th>
+            <th class="px-4 py-2">Checks</th>
+            <th class="px-4 py-2">App Checks</th>
+            <th class="px-4 py-2">External API</th>
+            <th class="px-4 py-2">Server Version</th>
+          </tr>
+        </thead>
+        <tbody id="statusTableBody"></tbody>
+      </table>
+    </div>
+    <script>
+      const domains = [
+        "https://slavia.tpapp.cz",
+        "https://hcsparta.tpapp.cz",
+        "https://skslovan.tpapp.cz",
+        // Add more domains as needed
+      ];
+
+      const extractDomainName = (url) => {
+        const matches = url.match(/^https:\/\/(.*?)\.tpapp\.cz/);
+        return matches ? matches[1] : url;
+      };
+
+      const fetchStatus = async (domain) => {
+        try {
+          const response = await fetch(`${domain}/probe/services`);
+          const data = await response.json();
+          return { domain, data };
+        } catch (error) {
+          console.error(`Failed to fetch data from ${domain}`, error);
+          return { domain, data: null };
+        }
+      };
+
+      const renderChecks = (checks) => {
+        return `
+                <table class="check-table">
+                    ${Object.entries(checks)
+                      .map(
+                        ([key, value]) => `
+                        <tr>
+                            <td>${value ? "✅" : "❌"}</td>
+                            <td class="pl-2">${key}</td>
+                        </tr>
+                    `
+                      )
+                      .join("")}
+                </table>
+            `;
+      };
+
+      const updateTable = (results) => {
+        const tableBody = document.getElementById("statusTableBody");
+        results.forEach(({ domain, data }) => {
+          const row = document.createElement("tr");
+          row.classList.add("border-t");
+
+          if (data) {
+            const statusIcon = data.status === "ALL OK" ? "✅" : "❌";
+            const statusAppIcon = data.statusApp === "ALL OK" ? "✅" : "❌";
+            const domainName = extractDomainName(domain);
+            const highlightClass =
+              data.status !== "ALL OK" || data.statusApp !== "ALL OK"
+                ? "highlight-failed"
+                : "";
+
+            row.innerHTML = `
+                        <td class="border px-4 py-2 ${highlightClass}">${domainName}</td>
+                        <td class="border px-4 py-2 text-center ${highlightClass}">${statusIcon}</td>
+                        <td class="border px-4 py-2 text-center ${highlightClass}">${statusAppIcon}</td>
+                        <td class="border px-4 py-2 ${highlightClass}">${renderChecks(
+              data.checks
+            )}</td>
+                        <td class="border px-4 py-2 ${highlightClass}">${renderChecks(
+              data.checksApp
+            )}</td>
+                        <td class="border px-4 py-2 ${highlightClass}">${renderChecks(
+              data.extApi
+            )}</td>
+                        <td class="border px-4 py-2 text-center ${highlightClass}">${
+              data.info?.serverVersion || "N/A"
+            }</td>
+                    `;
+          } else {
+            const domainName = extractDomainName(domain);
+
+            row.innerHTML = `
+                        <td class="border px-4 py-2 highlight-failed">${domainName}</td>
+                        <td class="border px-4 py-2 text-center text-red-500 highlight-failed">❌</td>
+                        <td class="border px-4 py-2 text-center text-red-500 highlight-failed">❌</td>
+                        <td class="border px-4 py-2 highlight-failed">Failed to load data</td>
+                        <td class="border px-4 py-2 highlight-failed">Failed to load data</td>
+                        <td class="border px-4 py-2 highlight-failed">Failed to load data</td>
+                        <td class="border px-4 py-2 text-center highlight-failed">N/A</td>
+                    `;
+          }
+
+          tableBody.appendChild(row);
+        });
+      };
+
+      (async () => {
+        const results = await Promise.all(domains.map(fetchStatus));
+        updateTable(results);
+      })();
+    </script>
+  </body>
+</html>
