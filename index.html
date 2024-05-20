@@ -51,7 +51,9 @@
       ];
 
       const extractDomainName = (url) => {
-        const matches = url.match(/^https:\/\/(.*?)\.tpapp\.cz/);
+        const matches = url.match(
+          /^https:\/\/(?:.*?\.)?(.*?)(?:\.tpapp\.cz|\.spectado\.com)/
+        );
         return matches ? matches[1] : url;
       };
 
