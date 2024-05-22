@@ -89,6 +89,18 @@
       const updateTable = (results) => {
         const tableBody = document.getElementById("statusTableBody");
         tableBody.innerHTML = ""; // Clear existing rows
+
+        // Sort results to move FAILED status to the top
+        results.sort((a, b) => {
+          const aFailed =
+            a.data &&
+            (a.data.status !== "ALL OK" || a.data.statusApp !== "ALL OK");
+          const bFailed =
+            b.data &&
+            (b.data.status !== "ALL OK" || b.data.statusApp !== "ALL OK");
+          return bFailed - aFailed;
+        });
+
         results.forEach(({ domain, data }) => {
           const row = document.createElement("tr");
           row.classList.add("border-t");
